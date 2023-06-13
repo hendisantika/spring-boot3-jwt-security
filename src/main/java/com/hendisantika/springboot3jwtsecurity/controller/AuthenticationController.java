@@ -4,12 +4,16 @@ import com.hendisantika.springboot3jwtsecurity.dto.AuthenticationRequest;
 import com.hendisantika.springboot3jwtsecurity.dto.AuthenticationResponse;
 import com.hendisantika.springboot3jwtsecurity.dto.RegisterRequest;
 import com.hendisantika.springboot3jwtsecurity.service.AuthenticationService;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.io.IOException;
 
 /**
  * Created by IntelliJ IDEA.
@@ -41,4 +45,13 @@ public class AuthenticationController {
     ) {
         return ResponseEntity.ok(authenticationService.authenticate(request));
     }
+
+    @PostMapping("/refresh-token")
+    public void refreshToken(
+            HttpServletRequest request,
+            HttpServletResponse response
+    ) throws IOException {
+        authenticationService.refreshToken(request, response);
+    }
+
 }
