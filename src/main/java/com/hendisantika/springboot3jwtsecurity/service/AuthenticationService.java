@@ -1,5 +1,6 @@
 package com.hendisantika.springboot3jwtsecurity.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hendisantika.springboot3jwtsecurity.dto.AuthenticationRequest;
 import com.hendisantika.springboot3jwtsecurity.dto.AuthenticationResponse;
 import com.hendisantika.springboot3jwtsecurity.dto.RegisterRequest;
@@ -8,11 +9,16 @@ import com.hendisantika.springboot3jwtsecurity.entity.TokenType;
 import com.hendisantika.springboot3jwtsecurity.entity.User;
 import com.hendisantika.springboot3jwtsecurity.repository.TokenRepository;
 import com.hendisantika.springboot3jwtsecurity.repository.UserRepository;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+
+import java.io.IOException;
 
 /**
  * Created by IntelliJ IDEA.
@@ -90,5 +96,33 @@ public class AuthenticationService {
             token.setRevoked(true);
         });
         tokenRepository.saveAll(validUserTokens);
+    }
+
+    public void refreshToken(
+            HttpServletRequest request,
+            HttpServletResponse response
+    ) throws IOException {
+        final String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
+        final String refreshToken;
+        final String userEmail;
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return;
+        }
+        refreshToken = authHeader.substring(7);
+        userEmail = jwtService.extractUsername(refreshToken);
+        if (userEmail != null) {
+            var user = this.repository.findByEmail(userEmail)
+                    .orElseThrow();
+            if (jwtService.isTokenValid(refreshToken, user)) {
+                var accessToken = jwtService.generateToken(user);
+                revokeAllUserTokens(user);
+                saveUserToken(user, accessToken);
+                var authResponse = AuthenticationResponse.builder()
+                        .accessToken(accessToken)
+                        .refreshToken(refreshToken)
+                        .build();
+                new ObjectMapper().writeValue(response.getOutputStream(), authResponse);
+            }
+        }
     }
 }
