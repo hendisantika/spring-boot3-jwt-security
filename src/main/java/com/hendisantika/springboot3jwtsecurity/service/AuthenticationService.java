@@ -3,6 +3,8 @@ package com.hendisantika.springboot3jwtsecurity.service;
 import com.hendisantika.springboot3jwtsecurity.dto.AuthenticationRequest;
 import com.hendisantika.springboot3jwtsecurity.dto.AuthenticationResponse;
 import com.hendisantika.springboot3jwtsecurity.dto.RegisterRequest;
+import com.hendisantika.springboot3jwtsecurity.entity.Token;
+import com.hendisantika.springboot3jwtsecurity.entity.TokenType;
 import com.hendisantika.springboot3jwtsecurity.entity.User;
 import com.hendisantika.springboot3jwtsecurity.repository.TokenRepository;
 import com.hendisantika.springboot3jwtsecurity.repository.UserRepository;
@@ -66,5 +68,16 @@ public class AuthenticationService {
                 .accessToken(jwtToken)
                 .refreshToken(refreshToken)
                 .build();
+    }
+
+    private void saveUserToken(User user, String jwtToken) {
+        var token = Token.builder()
+                .user(user)
+                .token(jwtToken)
+                .tokenType(TokenType.BEARER)
+                .expired(false)
+                .revoked(false)
+                .build();
+        tokenRepository.save(token);
     }
 }
