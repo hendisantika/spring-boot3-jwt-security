@@ -1,6 +1,7 @@
 package com.hendisantika.springboot3jwtsecurity.config;
 
 import com.hendisantika.springboot3jwtsecurity.repository.TokenRepository;
+import com.hendisantika.springboot3jwtsecurity.service.JwtService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
