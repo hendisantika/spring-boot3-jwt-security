@@ -1,5 +1,6 @@
 package com.hendisantika.springboot3jwtsecurity.service;
 
+import com.hendisantika.springboot3jwtsecurity.dto.AuthenticationRequest;
 import com.hendisantika.springboot3jwtsecurity.dto.AuthenticationResponse;
 import com.hendisantika.springboot3jwtsecurity.dto.RegisterRequest;
 import com.hendisantika.springboot3jwtsecurity.entity.User;
@@ -7,6 +8,7 @@ import com.hendisantika.springboot3jwtsecurity.repository.TokenRepository;
 import com.hendisantika.springboot3jwtsecurity.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -41,6 +43,25 @@ public class AuthenticationService {
         var jwtToken = jwtService.generateToken(user);
         var refreshToken = jwtService.generateRefreshToken(user);
         saveUserToken(savedUser, jwtToken);
+        return AuthenticationResponse.builder()
+                .accessToken(jwtToken)
+                .refreshToken(refreshToken)
+                .build();
+    }
+
+    public AuthenticationResponse authenticate(AuthenticationRequest request) {
+        authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(
+                        request.getEmail(),
+                        request.getPassword()
+                )
+        );
+        var user = repository.findByEmail(request.getEmail())
+                .orElseThrow();
+        var jwtToken = jwtService.generateToken(user);
+        var refreshToken = jwtService.generateRefreshToken(user);
+        revokeAllUserTokens(user);
+        saveUserToken(user, jwtToken);
         return AuthenticationResponse.builder()
                 .accessToken(jwtToken)
                 .refreshToken(refreshToken)
