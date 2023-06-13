@@ -9,6 +9,8 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import static com.hendisantika.springboot3jwtsecurity.entity.Permission.*;
+
 /**
  * Created by IntelliJ IDEA.
  * Project : spring-boot3-jwt-security
