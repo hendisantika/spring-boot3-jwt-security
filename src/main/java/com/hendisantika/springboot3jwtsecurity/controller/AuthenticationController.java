@@ -1,5 +1,6 @@
 package com.hendisantika.springboot3jwtsecurity.controller;
 
+import com.hendisantika.springboot3jwtsecurity.dto.AuthenticationRequest;
 import com.hendisantika.springboot3jwtsecurity.dto.AuthenticationResponse;
 import com.hendisantika.springboot3jwtsecurity.dto.RegisterRequest;
 import com.hendisantika.springboot3jwtsecurity.service.AuthenticationService;
@@ -32,5 +33,12 @@ public class AuthenticationController {
             @RequestBody RegisterRequest request
     ) {
         return ResponseEntity.ok(authenticationService.register(request));
+    }
+
+    @PostMapping("/authenticate")
+    public ResponseEntity<AuthenticationResponse> authenticate(
+            @RequestBody AuthenticationRequest request
+    ) {
+        return ResponseEntity.ok(authenticationService.authenticate(request));
     }
 }
