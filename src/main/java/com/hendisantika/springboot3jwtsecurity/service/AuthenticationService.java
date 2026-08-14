@@ -9,11 +9,13 @@ import com.hendisantika.springboot3jwtsecurity.entity.TokenType;
 import com.hendisantika.springboot3jwtsecurity.entity.User;
 import com.hendisantika.springboot3jwtsecurity.repository.TokenRepository;
 import com.hendisantika.springboot3jwtsecurity.repository.UserRepository;
+import com.hendisantika.springboot3jwtsecurity.exception.EmailAlreadyUsedException;
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -43,6 +45,9 @@ public class AuthenticationService {
     private final AuthenticationManager authenticationManager;
 
     public AuthenticationResponse register(RegisterRequest request) {
+        if (repository.findByEmail(request.getEmail()).isPresent()) {
+            throw new EmailAlreadyUsedException(request.getEmail());
+        }
         var user = User.builder()
                 .firstname(request.getFirstname())
                 .lastname(request.getLastname())
@@ -50,7 +55,14 @@ public class AuthenticationService {
                 .password(passwordEncoder.encode(request.getPassword()))
                 .role(request.getRole())
                 .build();
-        var savedUser = repository.save(user);
+        final User savedUser;
+        try {
+            savedUser = repository.save(user);
+        } catch (DataIntegrityViolationException exception) {
+            // Two registrations for the same address racing each other: the unique
+            // constraint decides, and the loser gets the same 409 as a plain duplicate.
+            throw new EmailAlreadyUsedException(request.getEmail());
+        }
         var jwtToken = jwtService.generateToken(user);
         var refreshToken = jwtService.generateRefreshToken(user);
         saveUserToken(savedUser, jwtToken);
