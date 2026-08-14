@@ -61,9 +61,15 @@ spring:
     url: jdbc:postgresql://localhost:5432/jwt_security
     username: postgres
     password: hendi34
+    driver-class-name: org.postgresql.Driver
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: update              # Hibernate creates/updates _user and token
+    show-sql: true                  # log the generated SQL
+    open-in-view: false             # no lazy loading outside the service layer
+    properties:
+      hibernate:
+        format_sql: true
 
 application:
   security:
@@ -73,6 +79,11 @@ application:
       refresh-token:
         expiration: 604800000       # refresh token — 7 days
 ```
+
+The Hibernate dialect is deliberately not configured — it is detected from the JDBC URL, and setting it
+explicitly only produces a startup warning. `open-in-view` is off because nothing in the app reads a lazy
+association during view rendering, so the persistence session does not need to stay open for the whole
+request.
 
 Override anything at runtime without editing the file, e.g.:
 
@@ -162,7 +173,23 @@ curl -i $BASE/demo-controller -H "Authorization: Bearer $TOKEN"
 # -> 403 Forbidden
 ```
 
-Requests without a valid, non-revoked token receive **403 Forbidden**.
+### Responses to bad credentials
+
+| Situation                                                        | Status |
+|------------------------------------------------------------------|--------|
+| No token, expired, revoked, malformed or tampered-with token      | `403`  |
+| Valid token without the required role/authority                   | `403`  |
+| Wrong password or unknown user on `/auth/authenticate`            | `403`  |
+| Invalid or malformed token on `/auth/refresh-token`               | `401`  |
+
+Invalid tokens are rejected quietly — the parser failure is logged at `DEBUG`, not as an ERROR stack trace,
+so an unauthenticated caller cannot flood the logs. Raise the level to see them:
+
+```yaml
+logging:
+  level:
+    com.hendisantika.springboot3jwtsecurity: DEBUG
+```
 
 ## How it works
 
