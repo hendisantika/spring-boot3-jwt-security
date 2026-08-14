@@ -49,7 +49,16 @@ The app expects a database named `jwt_security`:
 createdb -h localhost -U postgres jwt_security
 ```
 
-Tables (`_user`, `token`) are created automatically by Hibernate (`ddl-auto: update`) on first start.
+Tables (`_user`, `token`) are created automatically by Hibernate (`ddl-auto: update`) on first start,
+including the unique constraint on `_user.email`.
+
+If you are upgrading a database created before that constraint existed, add it by hand — `ddl-auto: update`
+only creates missing tables and columns, never constraints on existing ones:
+
+```sql
+-- remove any duplicate accounts first, then:
+alter table _user add constraint uk_user_email unique (email);
+```
 
 ### 2. Configure
 
@@ -136,7 +145,7 @@ Swagger, `/v3/api-docs/**`, and `/webjars/**` are also public; everything else r
 
 | Role      | Authorities                                                                                       |
 |-----------|---------------------------------------------------------------------------------------------------|
-| `USER`    | `ROLE_USER` only                                                                                   |
+| `USER`    | `ROLE_USER` only — the default when a registration omits `role`                                    |
 | `MANAGER` | `ROLE_MANAGER`, `management:read`, `management:create`, `management:update`, `management:delete`    |
 | `ADMIN`   | `ROLE_ADMIN`, all `admin:*` and all `management:*` authorities                                      |
 
@@ -181,6 +190,20 @@ curl -i $BASE/demo-controller -H "Authorization: Bearer $TOKEN"
 | Valid token without the required role/authority                   | `403`  |
 | Wrong password or unknown user on `/auth/authenticate`            | `403`  |
 | Invalid or malformed token on `/auth/refresh-token`               | `401`  |
+| Registration missing or malforming a required field               | `400`  |
+| Registration for an email that already has an account             | `409`  |
+
+A registration body must carry `firstname`, `lastname`, a well-formed `email` and a `password`; `role` is
+optional and defaults to `USER`. Validation failures come back as a `ProblemDetail` naming each bad field:
+
+```json
+{
+  "status": 400,
+  "title": "Validation failed",
+  "instance": "/api/v1/auth/register",
+  "errors": { "email": "email must be a valid address", "password": "password is required" }
+}
+```
 
 Invalid tokens are rejected quietly — the parser failure is logged at `DEBUG`, not as an ERROR stack trace,
 so an unauthenticated caller cannot flood the logs. Raise the level to see them:
