@@ -19,6 +19,27 @@ jobs:
 
     runs-on: ubuntu-latest
 
+    # The dependency submission step below writes a snapshot back to the repository,
+    # which the default read-only GITHUB_TOKEN cannot do.
+    permissions:
+      contents: write
+
+    # The context-load test boots the real application, which needs a database.
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: jwt_security
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d jwt_security"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
     - uses: actions/checkout@v7
     - name: Set up JDK 21
@@ -29,6 +50,10 @@ jobs:
         cache: maven
     - name: Build with Maven
       run: mvn -B package --file pom.xml
+      env:
+        SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/jwt_security
+        SPRING_DATASOURCE_USERNAME: postgres
+        SPRING_DATASOURCE_PASSWORD: postgres
 
     # Optional: Uploads the full dependency graph to GitHub to improve the quality of Dependabot alerts this repository can receive
     - name: Update dependency graph
