@@ -9,9 +9,11 @@ import com.hendisantika.springboot3jwtsecurity.entity.TokenType;
 import com.hendisantika.springboot3jwtsecurity.entity.User;
 import com.hendisantika.springboot3jwtsecurity.repository.TokenRepository;
 import com.hendisantika.springboot3jwtsecurity.repository.UserRepository;
+import io.jsonwebtoken.JwtException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -32,6 +34,7 @@ import java.io.IOException;
  */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AuthenticationService {
     private final UserRepository repository;
     private final TokenRepository tokenRepository;
@@ -109,7 +112,15 @@ public class AuthenticationService {
             return;
         }
         refreshToken = authHeader.substring(7);
-        userEmail = jwtService.extractUsername(refreshToken);
+        try {
+            userEmail = jwtService.extractUsername(refreshToken);
+        } catch (JwtException | IllegalArgumentException exception) {
+            // Expired, tampered with or plain malformed: answer 401 rather than letting the
+            // parser exception bubble up as a 500 with a stack trace.
+            log.debug("Rejecting an invalid refresh token: {}", exception.getMessage());
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            return;
+        }
         if (userEmail != null) {
             var user = this.repository.findByEmail(userEmail)
                     .orElseThrow();
