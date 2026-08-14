@@ -48,7 +48,9 @@ public class User implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return role.getAuthorities();
+        // Rows predating the mandatory role carry none, which reads as "no authorities"
+        // rather than blowing up mid-request.
+        return role == null ? List.of() : role.getAuthorities();
     }
 
     @Override

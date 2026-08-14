@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.hendisantika.springboot3jwtsecurity.dto.AuthenticationRequest;
 import com.hendisantika.springboot3jwtsecurity.dto.AuthenticationResponse;
 import com.hendisantika.springboot3jwtsecurity.dto.RegisterRequest;
+import com.hendisantika.springboot3jwtsecurity.entity.Role;
 import com.hendisantika.springboot3jwtsecurity.entity.Token;
 import com.hendisantika.springboot3jwtsecurity.entity.TokenType;
 import com.hendisantika.springboot3jwtsecurity.entity.User;
@@ -53,7 +54,7 @@ public class AuthenticationService {
                 .lastname(request.getLastname())
                 .email(request.getEmail())
                 .password(passwordEncoder.encode(request.getPassword()))
-                .role(request.getRole())
+                .role(request.getRole() == null ? Role.USER : request.getRole())
                 .build();
         final User savedUser;
         try {
